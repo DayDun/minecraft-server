@@ -21,7 +21,7 @@ function serialize(packet, data, state) {
     for (let j in data) {
       if (pack.definition[i].name == j) {
         orderedData.push(data[j]);
-        length += Types[pack.definition[i].type].size(data[j]);
+        length += Types[pack.definition[i].type].size(data[j], pack.definition[i].options);
         break;
       }
     }
@@ -32,7 +32,7 @@ function serialize(packet, data, state) {
   offset = Types.varint.write(length, buffer, offset);
   offset = Types.varint.write(packetId, buffer, offset);
   for (let i=0; i<pack.definition.length; i++) {
-    offset = Types[pack.definition[i].type].write(orderedData[i], buffer, offset);
+    offset = Types[pack.definition[i].type].write(orderedData[i], buffer, offset, pack.definition[i].options);
   }
   console.log("serialize", length, buffer);
   return buffer;
@@ -65,7 +65,7 @@ class Deserializer extends Stream.Writable {
         for (let i=0; i<packet.definition.length; i++) {
           let def = packet.definition[i];
 
-          let parsed = Types[def.type].read(buffer, offset);
+          let parsed = Types[def.type].read(buffer, offset, def.options);
           offset += parsed.size;
 
           output[def.name] = parsed.value;

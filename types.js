@@ -1,4 +1,4 @@
-module.exports = {
+const Types = {
   varint: {
     read: function(buffer, offset) {
       let result = 0;
@@ -251,9 +251,9 @@ module.exports = {
       return Types.varint.size(length) + length;
     }
   },
-  varintbytearray: {
-    read: function(buffer, offset) {
-      let length = Types.varint.read(buffer, offset);
+  bytearray: {
+    read: function(buffer, offset, options) {
+      let length = Types[options.countType].read(buffer, offset);
       
       let output = Buffer.alloc(length.value);
       for (let i=0; i<length.value; i++) {
@@ -265,15 +265,15 @@ module.exports = {
         size: length.size + length.value
       }
     },
-    write: function(value, buffer, offset) {
-      let cursor = Types.varint.write(value.length, buffer, offset);
+    write: function(value, buffer, offset, options) {
+      let cursor = Types[options.countType].write(value.length, buffer, offset);
       for (let i=0; i<value.length; i++) {
         buffer.writeUInt8(value.readUInt8(i), cursor + i);
       }
       return cursor + value.length;
     },
-    size: function(value) {
-      return Types.varint.size(value.length) + value.length;
+    size: function(value, options) {
+      return Types[options.countType].size(value.length) + value.length;
     }
   },
   restbuffer: {
@@ -324,18 +324,6 @@ module.exports = {
 			
 		}
 	},
-  varintnbt: {
-    read: function(buffer, offset) {
-			
-		},
-		write: function(value, buffer, offset) {
-			let length = Types.varint.write(value.length, buffer, offset);
-      return offset + length.size;
-		},
-		size: function(value) {
-			return Types.varint.size(value.length);
-		}
-  },
 	slot: {
     read: function(buffer, offset) {
 			let itemId = buffer.readInt16BE(offset);
@@ -372,5 +360,37 @@ module.exports = {
 		size: function(value) {
 			
 		}
-  }
+  },
+	array: {
+    read: function(buffer, offset, options) {
+			let length = Types[options.countType].read(buffer, offset);
+			let cursor = offset + length.size;
+			let output = [];
+			for (let i=0; i<length.value; i++) {
+				let val = Types[options.type].read(buffer, cursor);
+				output.push(val.value);
+				cursor += val.size;
+			}
+			return {
+				value: output,
+				size: cursor - offset
+			};
+		},
+		write: function(value, buffer, offset, options) {
+			let cursor = Types[options.countType].write(value.length, buffer, offset);
+			for (let i=0; i<value.length; i++) {
+				cursor = Types[options.type].write(value[i], buffer, cursor);
+			}
+      return cursor;
+		},
+		size: function(value, options) {
+			let length = Types[options.countType].size(value.length);
+			for (let i=0; i<value.length; i++) {
+				length += Types[options.type].size(value[i]);
+			}
+			return length;
+		}
+	}
 };
+
+module.exports = Types;

@@ -53,8 +53,8 @@ module.exports = {
         name: "encryptionRequest",
         definition: [
           {name: "serverId", type: "string"},
-          {name: "publicKey", type: "varintbytearray"},
-          {name: "verifyToken", type: "varintbytearray"}
+          {name: "publicKey", type: "bytearray", options: {countType: "varint"}},
+          {name: "verifyToken", type: "bytearray", options: {countType: "varint"}}
         ]
       },
       0x02: {
@@ -75,8 +75,8 @@ module.exports = {
       0x01: {
         name: "encryptionResponse",
         definition: [
-          {name: "sharedSecret", type: "varintbytearray"},
-          {name: "verifyToken", type: "varintbytearray"}
+          {name: "sharedSecret", type: "bytearray", options: {countType: "varint"}},
+          {name: "verifyToken", type: "bytearray", options: {countType: "varint"}}
         ]
       }
     }
@@ -90,8 +90,8 @@ module.exports = {
           {name: "chunkY", type: "i32"},
           {name: "groundUp", type: "boolean"},
           {name: "primaryBitMask", type: "varint"},
-          {name: "data", type: "varintbytearray"},
-          {name: "blockEntities", type: "varintnbt"}
+          {name: "data", type: "bytearray", options: {countType: "varint"}},
+          {name: "blockEntities", type: "array", options: {countType: "varint", type: "nbt"}}
         ]
       },
       0x24: {
@@ -179,12 +179,29 @@ module.exports = {
           {name: "data", type: "restbuffer"}
         ]
       },
+			0x0d: {
+				name: "position",
+				definition: [
+					{name: "x", type: "f64"},
+					{name: "y", type: "f64"},
+					{name: "z", type: "f64"},
+					{name: "onGround", type: "boolean"}
+				]
+			},
 			0x0e: {
 				name: "positionLook",
 				definition: [
 					{name: "x", type: "f64"},
 					{name: "y", type: "f64"},
 					{name: "z", type: "f64"},
+					{name: "yaw", type: "f32"},
+					{name: "pitch", type: "f32"},
+					{name: "onGround", type: "boolean"}
+				]
+			},
+			0x0f: {
+				name: "look",
+				definition: [
 					{name: "yaw", type: "f32"},
 					{name: "pitch", type: "f32"},
 					{name: "onGround", type: "boolean"}
