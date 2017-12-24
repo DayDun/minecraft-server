@@ -45,6 +45,30 @@ class Deserializer extends Stream.Writable {
   }
   
   _write(buffer, encoding, done) {
+    function parse(attribute, output, offset) {
+      let cursor = offset;
+      
+      if (attribute.type == "switch") {
+        let items = attribute.frames[output[attribute.compareTo]];
+        console.log(items);
+        for (let j=0; j<items.length; j++) {
+          let result = parse(items[j], output, cursor);
+          cursor = result.offset;
+          output = result.output;
+        }
+      } else {
+        let parsed = Types[attribute.type].read(buffer, cursor, attribute.options);
+        cursor += parsed.size;
+
+        output[attribute.name] = parsed.value;
+      }
+      
+      return {
+        offset: cursor,
+        output: output
+      };
+    }
+    
     if (buffer.readUInt8(0) == 0xFE) {
       console.log("Legacy");
       return [];
@@ -63,12 +87,9 @@ class Deserializer extends Stream.Writable {
         let output = {};
 
         for (let i=0; i<packet.definition.length; i++) {
-          let def = packet.definition[i];
-
-          let parsed = Types[def.type].read(buffer, offset, def.options);
-          offset += parsed.size;
-
-          output[def.name] = parsed.value;
+          let result = parse(packet.definition[i], output, offset);
+          offset = result.offset;
+          output = result.output;
         }
         this.client.emit(packet.name, output);
         console.log(packet.name, output);

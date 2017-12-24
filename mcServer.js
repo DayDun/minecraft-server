@@ -187,7 +187,7 @@ class Client extends EventEmitter {
         }
       });
       
-      let chunkData = Buffer.alloc(20);
+      /*let chunkData = Buffer.alloc(20);
       chunkData.writeUInt8(1, 0);
       chunkData.writeUInt8(0, 1);
       this.write("chunkData", {
@@ -197,7 +197,7 @@ class Client extends EventEmitter {
         primaryBitMask: 0b0000000000000001,
         data: chunkData,
         blockEntities: []
-      });
+      });*/
     }.bind(this));
   }
   

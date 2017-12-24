@@ -1,4 +1,18 @@
 const Types = {
+  void: {
+    read: function(buffer, offset) {
+      return {
+        value: undefined,
+        size: 0
+      };
+    },
+    write: function(value, buffer, offset) {
+      return offset;
+    },
+    size: function(value) {
+      return 0;
+    }
+  },
   varint: {
     read: function(buffer, offset) {
       let result = 0;
@@ -315,82 +329,82 @@ const Types = {
   },
   nbt: {
     read: function(buffer, offset) {
-			
-		},
-		write: function(value, buffer, offset) {
-			
-		},
-		size: function(value) {
-			
-		}
-	},
-	slot: {
-    read: function(buffer, offset) {
-			let itemId = buffer.readInt16BE(offset);
-			if (itemId == -1) {
-				return {
-					value: {
-						itemId: itemId
-					},
-					size: 2
-				};
-			} else if (buffer.readInt8(offset + 3) === 0) {
-				return {
-					value: {
-						itemId: itemId,
-						itemCount: buffer.readInt8(offset + 2)
-					},
-					size: 3
-				};
-			} else {
-				let nbt = Types.nbt.read(buffer, offset + 3);
-				return {
-					value: {
-						itemId: itemId,
-						itemCount: buffer.readInt8(offset + 2),
-						nbt: nbt.value
-					},
-					size: 3 + nbt.size
-				};
-			}
-		},
-		write: function(value, buffer, offset) {
-			
-		},
-		size: function(value) {
-			
-		}
+      
+    },
+    write: function(value, buffer, offset) {
+      
+    },
+    size: function(value) {
+      
+    }
   },
-	array: {
+  slot: {
+    read: function(buffer, offset) {
+      let itemId = buffer.readInt16BE(offset);
+      if (itemId == -1) {
+        return {
+          value: {
+            itemId: itemId
+          },
+          size: 2
+        };
+      } else if (buffer.readInt8(offset + 3) === 0) {
+        return {
+          value: {
+            itemId: itemId,
+            itemCount: buffer.readInt8(offset + 2)
+          },
+          size: 3
+        };
+      } else {
+        let nbt = Types.nbt.read(buffer, offset + 3);
+        return {
+          value: {
+            itemId: itemId,
+            itemCount: buffer.readInt8(offset + 2),
+            nbt: nbt.value
+          },
+          size: 3 + nbt.size
+        };
+      }
+    },
+    write: function(value, buffer, offset) {
+      
+    },
+    size: function(value) {
+      
+    }
+  },
+  array: {
     read: function(buffer, offset, options) {
-			let length = Types[options.countType].read(buffer, offset);
-			let cursor = offset + length.size;
-			let output = [];
-			for (let i=0; i<length.value; i++) {
-				let val = Types[options.type].read(buffer, cursor);
-				output.push(val.value);
-				cursor += val.size;
-			}
-			return {
-				value: output,
-				size: cursor - offset
-			};
-		},
-		write: function(value, buffer, offset, options) {
-			let cursor = Types[options.countType].write(value.length, buffer, offset);
-			for (let i=0; i<value.length; i++) {
-				cursor = Types[options.type].write(value[i], buffer, cursor);
-			}
+      let length = Types[options.countType].read(buffer, offset);
+      let cursor = offset + length.size;
+      let output = [];
+      for (let i=0; i<length.value; i++) {
+        let val = Types[options.type].read(buffer, cursor);
+        output.push(val.value);
+        cursor += val.size;
+      }
+      return {
+        value: output,
+        size: cursor - offset
+      };
+    },
+    write: function(value, buffer, offset, options) {
+      let cursor = Types[options.countType].write(value.length, buffer, offset);
+      for (let i=0; i<value.length; i++) {
+        cursor = Types[options.type].write(value[i], buffer, cursor);
+      }
       return cursor;
-		},
-		size: function(value, options) {
-			let length = Types[options.countType].size(value.length);
-			for (let i=0; i<value.length; i++) {
-				length += Types[options.type].size(value[i]);
-			}
-			return length;
-		}
-	}
+    },
+    size: function(value, options) {
+      let length = Types[options.countType].size(value.length);
+      for (let i=0; i<value.length; i++) {
+        length += Types[options.type].size(value[i]);
+      }
+      return length;
+    }
+  }
 };
 
 module.exports = Types;
