@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "node-rsa": "^0.4.2"
+  }
+}
