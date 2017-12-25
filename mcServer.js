@@ -5,7 +5,16 @@ const NodeRSA = require("node-rsa");
 const Crypto = require("crypto");
 
 const Protocol = require("./protocol");
+const Chunk = require("./chunk");
 
+
+/*let string = (new Chunk(0, 0, [], [])).getData().slice(0, 200).toString("hex");
+console.log(string);
+let output = "";
+for (let i=0; i<string.length; i+=2) {
+  output += ("00000000" + parseInt(string.substr(i, 2), 16).toString(2)).slice(-8) + " ";
+}
+console.log(output);*/
 
 function bufferEqual(a, b) {
   if (a.length != b.length) {
@@ -162,7 +171,7 @@ class Client extends EventEmitter {
     this.on("login", function() {
       this.write("joinGame", {
         entityId: 0,
-        gamemode: 0,
+        gamemode: 1,
         dimension: 0,
         difficulty: 0,
         maxPlayers: 100,
@@ -187,16 +196,33 @@ class Client extends EventEmitter {
         }
       });
       
-      /*let chunkData = Buffer.alloc(20);
-      chunkData.writeUInt8(1, 0);
-      chunkData.writeUInt8(0, 1);
+      let chunk = new Chunk(0, 0, [], []);
+      chunk.setBlock(8, 7, 8, 1);
       this.write("chunkData", {
-        chunkX: 0,
-        chunkY: 0,
+        chunkX: chunk.x,
+        chunkY: chunk.y,
         groundUp: true,
         primaryBitMask: 0b0000000000000001,
-        data: chunkData,
-        blockEntities: []
+        data: chunk.getData(0b1111111111111111),
+        blockEntities: chunk.blockEntities
+      });
+      
+      let time = 0;
+      let interval = setInterval(function() {
+        time += 20;
+        this.write("timeUpdate", {
+          worldAge: [0, time],
+          timeOfDay: [0, time]
+        });
+      }.bind(this), 1000);
+      
+      /*this.write("blockChange", {
+        location: {
+          x: 8,
+          y: 0,
+          z: 8
+        },
+        blockId: 1
       });*/
     }.bind(this));
   }

@@ -83,6 +83,13 @@ module.exports = {
   },
   play: {
     toClient: {
+      0x0b: {
+        name: "blockChange",
+        definition: [
+          {name: "location", type: "position"},
+          {name: "blockId", type: "varint"}
+        ]
+      },
       0x21: {
         name: "chunkData",
         definition: [
@@ -122,6 +129,13 @@ module.exports = {
         name: "spawnPosition",
         definition: [
           {name: "location", type: "position"}
+        ]
+      },
+      0x48: {
+        name: "timeUpdate",
+        definition: [
+          {name: "worldAge", type: "i64"},
+          {name: "timeOfDay", type: "i64"}
         ]
       }
     },

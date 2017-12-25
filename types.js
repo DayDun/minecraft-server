@@ -177,15 +177,15 @@ const Types = {
       if (offset + 8 > buffer.length) {
         throw "nigger";
       }
-      const value = [buffer.readInt32BE(offset), buffer.readInt32BE(offset + 4)];
+      const value = [buffer.readUInt32BE(offset), buffer.readUInt32BE(offset + 4)];
       return {
         value: value,
         size: 8
       };
     },
     write: function(value, buffer, offset) {
-      buffer.writeInt32BE(value[0], offset);
-      buffer.writeInt32BE(value[1], offset + 4);
+      buffer.writeUInt32BE(value[0], offset);
+      buffer.writeUInt32BE(value[1], offset + 4);
       return offset + 8;
     },
     size: function(value) {
