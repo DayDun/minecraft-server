@@ -21,6 +21,7 @@ const Types = {
       
       while (true) {
         if (cursor + 1 > buffer.length) {
+          console.trace();
           throw "loleut";
         }
         
@@ -354,9 +355,10 @@ const Types = {
             itemId: itemId,
             itemCount: buffer.readInt8(offset + 2)
           },
-          size: 3
+          size: 4
         };
       } else {
+        console.log("NBTNBTNBTNBTNBTNBTNBT");
         let nbt = Types.nbt.read(buffer, offset + 3);
         return {
           value: {
@@ -369,10 +371,19 @@ const Types = {
       }
     },
     write: function(value, buffer, offset) {
-      
+      buffer.writeInt16BE(value.itemId, offset);
+      if (value.itemId != -1) {
+        buffer.writeInt8(value.itemCount, offset + 2);
+        return offset + 4;
+      }
+      return offset + 2;
     },
     size: function(value) {
-      
+      if (value.itemId == -1) {
+        return 2;
+      } else {
+        return 4;
+      }
     }
   },
   array: {

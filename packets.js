@@ -63,6 +63,12 @@ module.exports = {
           {name: "uuid", type: "string"},
           {name: "username", type: "string"}
         ]
+      },
+      0x03: {
+        name: "setCompression",
+        definition: [
+          {name: "threshold", type: "varint"}
+        ]
       }
     },
     toServer: {
@@ -90,11 +96,25 @@ module.exports = {
           {name: "blockId", type: "varint"}
         ]
       },
+      0x0e: {
+        name: "chatMessage",
+        definition: [
+          {name: "data", type: "string"},
+          {name: "position", type: "i8"}
+        ]
+      },
+      0x15: {
+        name: "windowItems",
+        definition: [
+          {name: "windowId", type: "u8"},
+          {name: "slots", type: "array", options: {type: "slot", countType: "i16"}}
+        ]
+      },
       0x21: {
         name: "chunkData",
         definition: [
           {name: "chunkX", type: "i32"},
-          {name: "chunkY", type: "i32"},
+          {name: "chunkZ", type: "i32"},
           {name: "groundUp", type: "boolean"},
           {name: "primaryBitMask", type: "varint"},
           {name: "data", type: "bytearray", options: {countType: "varint"}},

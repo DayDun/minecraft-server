@@ -3,12 +3,17 @@ const Net = require("net");
 const Https = require("https");
 const NodeRSA = require("node-rsa");
 const Crypto = require("crypto");
+const Zlib = require("zlib");
+const Long = require("long");
 
+const Types = require("./types");
 const Protocol = require("./protocol");
 const Chunk = require("./chunk");
+const World = require("./world");
 
 
-/*let string = (new Chunk(0, 0, [], [])).getData().slice(0, 200).toString("hex");
+/*let data = (new Chunk(0, 0, [], [])).getData();
+let string = data.slice(data.length - 100, data.length).toString("hex");
 console.log(string);
 let output = "";
 for (let i=0; i<string.length; i+=2) {
@@ -44,6 +49,8 @@ class Client extends EventEmitter {
     this.socket = socket;
     this.state = States.HANDSHAKE;
     
+    this.compressionThreshold = -1;
+    
     this.deserializer = new Protocol.Deserializer(this);
     
     this.id = this.server.nextId++;
@@ -53,6 +60,9 @@ class Client extends EventEmitter {
     this.socket.setNoDelay(true);
     this.socket.on("connect", function() {
       this.emit("connect");
+    }.bind(this));
+    this.socket.on("close", function() {
+      this.end();
     }.bind(this));
     
     this.on("pingStart", function(data) {
@@ -159,6 +169,11 @@ class Client extends EventEmitter {
       });
       
       let login = function() {
+        this.write("setCompression", {
+          threshold: 256
+        });
+        this.compressionThreshold = 256
+        
         this.write("loginSuccess", {
           uuid: this.uuid,
           username: this.username
@@ -195,26 +210,48 @@ class Client extends EventEmitter {
           z: 0
         }
       });
-      
-      let chunk = new Chunk(0, 0, [], []);
-      chunk.setBlock(8, 7, 8, 1);
-      this.write("chunkData", {
-        chunkX: chunk.x,
-        chunkY: chunk.y,
-        groundUp: true,
-        primaryBitMask: 0b0000000000000001,
-        data: chunk.getData(0b1111111111111111),
-        blockEntities: chunk.blockEntities
+      let inv = new Array(45).fill({itemId: -1});
+      inv[36] = {
+        itemId: 1,
+        itemCount: 64
+      };
+      this.write("windowItems", {
+        windowId: 0,
+        slots: inv
       });
       
-      let time = 0;
+      for (let z=-6; z<=6; z++) {
+        for (let x=-6; x<=6; x++) {
+          this.write("chunkData", {
+            chunkX: x,
+            chunkZ: z,
+            groundUp: true,
+            primaryBitMask: 0b1111111111111111,
+            data: this.server.world.getChunk(x, z).getData(0b1111111111111111),
+            blockEntities: this.server.world.getChunk(x, z).blockEntities
+          });
+        }
+      }
+      
+      let time = new Long(0);
       let interval = setInterval(function() {
-        time += 20;
+        time = time.add(20);
         this.write("timeUpdate", {
-          worldAge: [0, time],
-          timeOfDay: [0, time]
+          worldAge: [time.getHighBitsUnsigned(), time.getLowBitsUnsigned()],
+          timeOfDay: [time.getHighBitsUnsigned(), time.getLowBitsUnsigned()]
         });
       }.bind(this), 1000);
+      
+      this.on("chatMessage", function(data) {
+        this.write("chatMessage", {
+          data: JSON.stringify({text: "<" + this.username + "> " + data.message}),
+          position: 0
+        });
+      }.bind(this));
+      
+      this.on("end", function() {
+        clearInterval(interval);
+      });
       
       /*this.write("blockChange", {
         location: {
@@ -229,18 +266,43 @@ class Client extends EventEmitter {
   
   write(packet, data) {
     let pack = Protocol.serialize(packet, data, this.state);
-    if (this.cipher) {
-      this.cipher.write(pack);
+    if (this.compressionThreshold != -1) {
+      // Wow this is ugly, please fix
+      let pack2;
+      if (pack.length >= this.compressionThreshold) {
+        let result = Zlib.deflateSync(pack);
+        pack2 = Buffer.concat([Buffer.alloc(Types.varint.size(Types.varint.size(pack.length) + result.length) + Types.varint.size(pack.length)), result]);
+        let offset = Types.varint.write(Types.varint.size(pack.length) + result.length, pack2, 0);
+        Types.varint.write(pack.length, pack2, offset);
+      } else {
+        pack2 = Buffer.concat([Buffer.alloc(Types.varint.size(1 + pack.length) + 1), pack]);
+        Types.varint.write(1 + pack.length, pack2, 0);
+      }
+      
+      if (this.cipher) {
+        this.cipher.write(pack2);
+      } else {
+        this.socket.write(pack2);
+      }
     } else {
-      this.socket.write(pack);
+      let length = pack.length;
+      pack = Buffer.concat([Buffer.alloc(Types.varint.size(length)), pack]);
+      Types.varint.write(length, pack, 0);
+      if (this.cipher) {
+        this.cipher.write(pack);
+      } else {
+        this.socket.write(pack);
+      }
     }
   }
   
   end(reason) {
-    if (this.state == States.PLAY) {
-      this.write("kick_disconnect", {reason: reason});
-    } else if (this.state == States.LOGIN) {
-      this.write("disconnect", {reason: reason});
+    if (!this.socket.destroyed) {
+      if (this.state == States.PLAY) {
+        this.write("kick_disconnect", {reason: reason});
+      } else if (this.state == States.LOGIN) {
+        this.write("disconnect", {reason: reason});
+      }
     }
     
     delete this.server.clients[this.id];
@@ -264,6 +326,8 @@ class Server extends EventEmitter {
     
     this.clients = [];
     this.nextId = 0;
+    
+    this.world = new World();
     
     this.listen(this.port, this.host);
   }
